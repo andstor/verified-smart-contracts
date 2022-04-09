@@ -1,0 +1,3 @@
+[submodule "smart-contract-downloader"]
+	path = smart-contract-downloader
+	url = https://github.com/andstor/smart-contract-downloader.git
