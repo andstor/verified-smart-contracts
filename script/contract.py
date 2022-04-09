@@ -1,8 +1,5 @@
 
 import pandas as pd
-import re
-import json
-import copy
 
 from contract_file_handler import ContractFileHandler
 from utils import str2bool
@@ -11,25 +8,26 @@ from utils import str2bool
 class Contract():
 
     labels = {
-            'contract_name',
-            'file_path',
-            'contract_address',
-            'language',
-            'source_code',
-            'abi',
-            'compiler_version',
-            'optimization_used',
-            'runs',
-            'constructor_arguments',
-            'evm_version',
-            'library',
-            'license_type',
-            'proxy',
-            'implementation',
-            'swarm_source'
-        }
+        'contract_name',
+        'file_path',
+        'contract_address',
+        'language',
+        'source_code',
+        'abi',
+        'compiler_version',
+        'optimization_used',
+        'runs',
+        'constructor_arguments',
+        'evm_version',
+        'library',
+        'license_type',
+        'proxy',
+        'implementation',
+        'swarm_source'
+    }
 
-    etherscan_col_map = {'ContractName': 'contract_name',
+    etherscan_col_map = {
+        'ContractName': 'contract_name',
         'SourceCode': 'source_code',
         'ABI': 'abi',
         'CompilerVersion': 'compiler_version',
@@ -81,25 +79,27 @@ class Contract():
             'proxy': str2bool(proxy),
             'implementation': implementation,
             'swarm_source': swarm_source,
-        }        
+        }
 
         self.code_format = None
         self.files = []
         if self._data["source_code"]:
             self._process_source_code()
-        
+
         # Try to infer the contract file name from the contract name
         if len(self.files) == 1:
             # TODO: Assess if this is necessary
-            self._data["file_path"] = self._data["file_path"] or self._data["contract_name"] + self.get_file_extension()
+            self._data["file_path"] = self._data["file_path"] or self._data["contract_name"] + \
+                self.get_file_extension()
 
     def __str__(self):
         return self._data["contract_name"]
 
     def __repr__(self):
-        return self._data["contract_name"] + " - " + str(self._data["file_path"]) # pd.Series(self.__dict__).to_string()
+        # pd.Series(self.__dict__).to_string()
+        return self._data["contract_name"] + " - " + str(self._data["file_path"])
 
-    def __getitem__(self,key):
+    def __getitem__(self, key):
         return self._data[key]
 
     @classmethod
@@ -144,7 +144,8 @@ class Contract():
             self.code_format = "Text"
             self._data["language"] = "Solidity"
 
-        handler = ContractFileHandler(self.code_format, self.get_file_extension())
+        handler = ContractFileHandler(
+            self.code_format, self.get_file_extension())
         self.files = handler.extract(self._data["source_code"])
 
     def get_file_extension(self):
@@ -176,13 +177,14 @@ class Contract():
             source_code = []
             for file in self.files:
                 if file['file_path']:
-                    source_code.append("// File: " + file['file_path'] + "\n\n\n")
+                    source_code.append(
+                        "// File: " + file['file_path'] + "\n\n\n")
                     source_code.append(file['source_code'])
                 else:
                     source_code.insert(0, file['source_code'])
             self._data["source_code"] = "\n".join(source_code)
             self.code_format = "Text"
-        
+
         # Reset filename
         self._data["file_path"] = ""
 
@@ -193,4 +195,3 @@ class Contract():
         if labels:
             data = {key: value for key, value in data.items() if key in labels}
         return data
-

@@ -3,10 +3,8 @@ import pandas as pd
 from pathlib import Path
 from datasets import Dataset
 from tqdm import tqdm
-
-import sys
-sys.path.append("../smart-contract-downloader/script")
 from contract import Contract
+
 
 class DataProcessor():
 
@@ -14,7 +12,7 @@ class DataProcessor():
 
         self.dir_path = dir_path
         self.chunk_size = chunk_size
-        
+
         self.data = self._read_parquet(self.dir_path)
         self._buffer = None
         self._unique_file_names = pd.Series(dtype=str)
@@ -26,7 +24,7 @@ class DataProcessor():
         """
         TODO: Write docstring
         """
-        
+
         index = 0
         while True:
             file_path = Path(dir_path, "part." +
@@ -168,14 +166,16 @@ if __name__ == '__main__':
             dp = DataProcessor(args.source, args.chunk_size).all()
             for index, dataset in enumerate(dp):
                 contracts_ds = Dataset.from_pandas(dataset)
-                path = os.path.join(args.output_dir, dataset_name, "part." + str(index) + ".parquet")
+                path = os.path.join(
+                    args.output_dir, dataset_name, "part." + str(index) + ".parquet")
                 contracts_ds.to_parquet(path)
 
         elif dataset_name == "plain_text":
             dp = DataProcessor(args.source, args.chunk_size).plain_text()
             for index, dataset in enumerate(dp):
                 contracts_ds = Dataset.from_pandas(dataset)
-                path = os.path.join(args.output_dir, dataset_name, "part." + str(index) + ".parquet")
+                path = os.path.join(
+                    args.output_dir, dataset_name, "part." + str(index) + ".parquet")
                 contracts_ds.to_parquet(path)
         else:
             raise ValueError("Unknown dataset: " + dataset)

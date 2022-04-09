@@ -8,7 +8,7 @@ class ContractFileHandler():
     def __init__(self, code_format, file_extension):
         self.code_format = code_format
         self.file_extension = file_extension
-    
+
     def extract(self, data):
         """
         Extracts files from the source code
@@ -23,13 +23,13 @@ class ContractFileHandler():
                 extracted_files.append(item)
         else:
             raise Exception(f"No extractor for {self.code_format} format")
-        
-        return extracted_files
 
+        return extracted_files
 
     def _extract_text_files(self, data):
         files = []
-        files_code = re.split('\/\/ File:? (.*?' + re.escape(self.file_extension) + ')', data)
+        files_code = re.split(
+            '\/\/ File:? (.*?' + re.escape(self.file_extension) + ')', data)
 
         # Single file
         if len(files_code) == 1:
@@ -53,7 +53,6 @@ class ContractFileHandler():
 
         return files
 
-
     def _extract_multi_files(self, data):
         files = []
         try:
@@ -66,7 +65,6 @@ class ContractFileHandler():
             source_code = source['content']
             files.append({'file_path': file_path, 'source_code': source_code})
         return files
-
 
     def _extract_json_files(self, data):
         files = []

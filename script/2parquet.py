@@ -1,8 +1,6 @@
 import os
 import json
 import pandas as pd
-import re
-import requests
 from os import scandir
 from pathlib import Path
 from tqdm import tqdm
@@ -12,10 +10,8 @@ import gc
 from json.decoder import JSONDecodeError
 import tarfile
 import os
-
-import sys
-sys.path.append("../smart-contract-downloader/script")
 from contract import Contract
+
 
 # Precomputing files count
 def count_files(path, hidden=False):
@@ -187,7 +183,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Convert contract JSON data files to parquet files.')
     parser.add_argument('-s', '--source', metavar='source', type=str, required=False,
-                        default="data", help='path to directory with files to process.')
+                        default="downloads", help='path to directory with files to process.')
     parser.add_argument('-o', '--output', metavar='output', type=str, required=False,
                         default="parquet", help='the path where the output should be stored.')
     parser.add_argument('--parquet-size', metavar='parquet_size', type=int, required=False,
