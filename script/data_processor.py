@@ -57,7 +57,9 @@ class DataProcessor():
         df["file_name"] = file_names
 
         dupes = df["file_name"].isin(self._unique_file_names)
-        dupes[df['file_name'] == ''] = False
+        # Keep empty filennames, as well as all the vyper files with standard contract name (Etherscan).
+        # TODO: Actuually compare the source code for uniqness.
+        dupes[(df['file_name'] == '') | (df['file_name'] == 'Vyper_contract.vy')] = False
         df = df[~dupes]
         # Keeping first since all_contracts is sorted on most transactions first.
         df = df.drop_duplicates(subset=['file_name'], keep='first')
