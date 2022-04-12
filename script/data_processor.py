@@ -87,7 +87,7 @@ class DataProcessor():
                             if jaccard_score > threshold:
                                 dupe_indexes.append(j)
                                 dupes += 1
-                                pbar.set_postfix(dupes=str(round(dupes*100/unique_values.shape[0], 2)) + "%")
+                                pbar.set_postfix(dupes=str(round(dupes*100/df.shape[0], 2)) + "%")
                                 pbar2.set_postfix(dupes=str(dupes) + "/" + str(grouping_values_df.shape[0]))
             else:
                 continue
