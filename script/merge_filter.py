@@ -40,4 +40,5 @@ def merge(l: list[pd.DataFrame], levels: list, filter: callable = None, force: b
             l.append(res_df)
             
             levels[-1] = levels.pop() + 1
+            pbar.update(1)
         
