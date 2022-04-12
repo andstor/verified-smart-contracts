@@ -66,7 +66,6 @@ class DataProcessor():
         pbar = tqdm(
             total=unique_values.shape[0], desc="Filtering \"" + str(grouping_column) + "\"", leave=False)
         dupe_indexes = []
-        dupes = 0
         for i, row in df.iterrows():
             if row[grouping_column] not in values:
                 values.add(row[grouping_column])
@@ -76,7 +75,9 @@ class DataProcessor():
                                         == row[grouping_column]]
                 if not grouping_values_df.shape[0] > 1:
                     continue
+                
                 with tqdm(total=grouping_values_df.shape[0], desc="Textdistance \"" + row[grouping_column] + "\"", leave=False) as pbar2:
+                    dupes = 0
                     for j, row2 in grouping_values_df.iterrows():
                         pbar2.update(1)
                         if j == i:
