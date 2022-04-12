@@ -84,7 +84,7 @@ class DataProcessor():
                         if row2[grouping_column] == row[grouping_column]:
                             jaccard_score = jaccard(
                                 row.source_code, row2.source_code)
-                            if jaccard_score > threshold:
+                            if jaccard_score < threshold:
                                 dupe_indexes.append(j)
                                 dupes += 1
                                 pbar.set_postfix(dupes=str(round(dupes*100/df.shape[0], 2)) + "%")
