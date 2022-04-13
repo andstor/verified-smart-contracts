@@ -65,6 +65,7 @@ class DataProcessor():
 
         pbar = tqdm(
             total=unique_values.shape[0], desc="Filtering \"" + str(grouping_column) + "\"", leave=False)
+        pbar.set_postfix(total=str(df.shape[0]))
         dupe_indexes = []
         dupes = 0
         for i, row in df.iterrows():
@@ -84,7 +85,7 @@ class DataProcessor():
                         if row2[grouping_column] == row[grouping_column]:
                             jaccard_score = jaccard(
                                 row.source_code, row2.source_code)
-                            if jaccard_score < threshold:
+                            if jaccard_score > threshold:
                                 dupe_indexes.append(j)
                                 dupes += 1
                                 pbar.set_postfix(dupes=str(round(dupes*100/df.shape[0], 2)) + "%")
