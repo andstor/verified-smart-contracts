@@ -87,7 +87,10 @@ class DataProcessor():
                             if jaccard_score > threshold:
                                 dupe_indexes.append(j)
                                 dupes += 1
-                                pbar.set_postfix(total=str(df.shape[0]), dupes=str(round(dupes*100/df.shape[0], 2)) + "%")
+                                pbar.set_postfix(
+                                    total=str(i) + "/" + str(df.shape[0]),
+                                    dupes=str(round(dupes*100/df.shape[0], 2)) + "%"
+                                )
             else:
                 continue
 
@@ -122,15 +125,16 @@ class DataProcessor():
         with duplicates removed.
         """
         df_gen = self.all_files()
-        
+
         def convert_plain_text(df: pd.DataFrame) -> pd.DataFrame:
             df = df.rename(columns={'source_code': 'text'})
             df = df[['text', 'language']]
             return df
 
-        plain_text_gen = map(convert_plain_text, df_gen)  # Add tmp file_name column
+        # Add tmp file_name column
+        plain_text_gen = map(convert_plain_text, df_gen)
         return plain_text_gen
-    
+
     def all_files(self) -> Iterable[Dataset]:
         """
         This function takes a list of strings and returns a list of strings
@@ -150,7 +154,8 @@ class DataProcessor():
         files_gen = map(lambda df: (self.pbar.update(1), df)
                         [-1], files_gen)  # Update progress bar
 
-        filter_func = partial(self._uniqify, grouping_column="file_name", threshold=0.9)
+        filter_func = partial(
+            self._uniqify, grouping_column="file_name", threshold=0.9)
         df = merge_filter(files_gen, filter_func)
 
         df.drop(columns='file_name', inplace=True)  # Drop tmp file_name column
@@ -168,7 +173,8 @@ class DataProcessor():
         # Update progress bar
         contract_gen = map(lambda df: (self.pbar.update(1), df)[-1], self.data)
 
-        filter_func = partial(self._uniqify, grouping_column="contract_name", threshold=0.9)
+        filter_func = partial(
+            self._uniqify, grouping_column="contract_name", threshold=0.9)
         df = merge_filter(contract_gen, filter_func)
 
         df = self._uniqify_filename(df)
@@ -261,7 +267,7 @@ if __name__ == '__main__':
             dp = DataProcessor(args.source, args.chunk_size).raw()
         else:
             raise ValueError("Unknown dataset: " + dataset)
-            
+
         for index, dataset in enumerate(dp):
             contracts_ds = Dataset.from_pandas(dataset)
             path = os.path.join(
