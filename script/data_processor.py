@@ -88,8 +88,8 @@ class DataProcessor():
                                 dupe_indexes.append(j)
                                 dupes += 1
                                 pbar.set_postfix(
-                                    total=str(i+1) + "/" + str(df.shape[0]),
-                                    dupes=str(round(dupes*100/df.shape[0], 2)) + "%"
+                                    dupes=str(round(dupes*100/df.shape[0], 2)) + "%",
+                                    total=str(df.shape[0])
                                 )
             else:
                 continue
