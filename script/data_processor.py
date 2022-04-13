@@ -141,7 +141,7 @@ class DataProcessor():
         with duplicates removed.
         """
         self.reset()
-        self.pbar.set_description("Dataset \"plain_text\"")
+        self.pbar.set_description("Dataset \"all_files\"")
 
         def add_file_name(df):
             df["file_name"] = df.apply(
@@ -173,8 +173,11 @@ class DataProcessor():
         # Update progress bar
         contract_gen = map(lambda df: (self.pbar.update(1), df)[-1], self.data)
 
+
+        # Set the threshold much lower than when split in files,
+        # since a lot of contracts embeds the same library codes.
         filter_func = partial(
-            self._uniqify, grouping_column="contract_name", threshold=0.9)
+            self._uniqify, grouping_column="contract_name", threshold=0.6)
         df = merge_filter(contract_gen, filter_func)
 
         df = self._uniqify_filename(df)
