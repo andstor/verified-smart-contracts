@@ -1,3 +1,9 @@
+from concurrent.futures import ProcessPoolExecutor
+import enum
+from multiprocessing import Pool, cpu_count
+from multiprocessing.pool import ThreadPool
+from random import shuffle
+from re import S
 from typing import Iterable
 import pandas as pd
 from pathlib import Path
@@ -7,32 +13,59 @@ from contract import Contract
 from merge_filter import merge_filter
 import textdistance
 from functools import partial
+import itertools
+import glob
+import logging
+
+log = logging.getLogger("data-processor")
+
+
+def find_dupes(column, threshold, df):
+    if df.shape[0] <= 1:
+        return []
+
+    dupe_indexes = []
+    jaccard = textdistance.Jaccard()
+    first_row = None
+    for i, row in df.iterrows():
+        if first_row is None:
+            first_row = row
+            continue
+        if row[column] == first_row[column]:
+            jaccard_score = jaccard(first_row.source_code, row.source_code)
+            if jaccard_score > threshold:
+                dupe_indexes.append(i)
+    return dupe_indexes
 
 
 class DataProcessor():
 
-    def __init__(self, dir_path: str, chunk_size: int):
+    def __init__(self, dir_path: str, cache_dir: str, chunk_size: int):
 
         self.dir_path = dir_path
+        self.cache_dir = cache_dir
         self.chunk_size = chunk_size
 
-        self.data = None
         self._buffer = None
         self._unique_file_names = pd.Series(dtype=str)
 
-        files_count = sum(1 for f in Path(self.dir_path).glob("*.parquet"))
-        self.pbar = tqdm(total=files_count, desc="Processing")
+        self.tot_dupes = 0
+        self.count = 0
+
+        self.pbar = None
 
     def reset(self):
-        self.data = self._read_parquet(self.dir_path)
         self._buffer = None
+        self.tot_dupes = 0
+        self.count = 0
         self._unique_file_names = pd.Series(dtype=str)
-        self.pbar.reset()
 
     def _read_parquet(self, dir_path):
         """
         TODO: Write docstring
         """
+        files_count = sum(1 for f in Path(dir_path).glob("*.parquet"))
+        self.pbar = tqdm(desc="Processing", total=files_count)
 
         index = 0
         while True:
@@ -44,6 +77,7 @@ class DataProcessor():
                 yield shard
             else:
                 return
+        self.pbar.close()
 
     def _explode_files(self, df):
         """
@@ -57,44 +91,31 @@ class DataProcessor():
         df = pd.DataFrame(contracts)
         return df
 
+    def applyParallel(self, df_grouped, func):
+        with Pool() as p:
+            #ret_list = p.map(func=func, iterable=[group for name, group in df_grouped])
+            iterable = [group for name, group in df_grouped]
+            chunksize = 100
+            res_list = []
+            with tqdm(total=len(iterable), desc="Filtering", leave=False) as pbar:
+                for res in p.imap_unordered(func=func, iterable=iterable, chunksize=chunksize):
+                    pbar.update()
+                    res_list.append(res)
+        return list(itertools.chain.from_iterable(res_list))
+
     def _uniqify(self, df: pd.DataFrame, grouping_column, threshold=0.9) -> pd.DataFrame:
-        values = set()
+        shuffled_df = df.sample(frac=1)
+        df_group = shuffled_df.groupby(grouping_column)
 
-        unique_values = df[grouping_column].unique()
-        jaccard = textdistance.Jaccard()
+        func = partial(find_dupes, grouping_column, threshold)
+        dupe_indexes = self.applyParallel(df_group, func)
 
-        pbar = tqdm(
-            total=unique_values.shape[0], desc="Filtering \"" + str(grouping_column) + "\"", leave=False)
-        dupe_indexes = []
-        dupes = 0
-        for i, row in df.iterrows():
-            if row[grouping_column] not in values:
-                values.add(row[grouping_column])
-                pbar.update(1)
-
-                grouping_values_df = df[df[grouping_column]
-                                        == row[grouping_column]]
-                if not grouping_values_df.shape[0] > 1:
-                    continue
-                with tqdm(total=grouping_values_df.shape[0], desc="Textdistance \"" + row[grouping_column] + "\"", leave=False) as pbar2:
-                    for j, row2 in grouping_values_df.iterrows():
-                        pbar2.update(1)
-                        if j == i:
-                            continue
-                        if row2[grouping_column] == row[grouping_column]:
-                            jaccard_score = jaccard(
-                                row.source_code, row2.source_code)
-                            if jaccard_score > threshold:
-                                dupe_indexes.append(j)
-                                dupes += 1
-                                pbar.set_postfix(
-                                    dupes=str(round(dupes*100/df.shape[0], 2)) + "%",
-                                    total=str(df.shape[0])
-                                )
-            else:
-                continue
-
-        pbar.close()
+        self.tot_dupes += len(dupe_indexes)
+        self.count += df.shape[0]
+        self.pbar.set_postfix(
+            dupes=str(self.tot_dupes) + "/" + str(self.count),
+            dupes_percentage=str(round(self.tot_dupes*100/self.count, 2)) + "%"
+        )
 
         df.drop(df.index[dupe_indexes], inplace=True)
         return df
@@ -124,7 +145,22 @@ class DataProcessor():
         This function takes a list of strings and returns a list of strings
         with duplicates removed.
         """
-        df_gen = self.all_files()
+        log.info("Generating \"plain_text\" dataset")
+
+        # Try to load "all_files" from cache
+        if self.cache_dir:
+
+            all_files_dir = Path(self.cache_dir, "all_files")
+
+            if glob.glob(str(Path(all_files_dir, "*.parquet"))):
+                log.info("Loading \"all_files\" from cache")
+                df_gen = self._read_parquet(all_files_dir)
+                df_gen = map(lambda df: (self.pbar.update(1), df)
+                             [-1], df_gen)  # Update progress bar
+
+        else:
+            log.info("Creating \"all_files\" dataset")
+            df_gen = self.all_files()
 
         def convert_plain_text(df: pd.DataFrame) -> pd.DataFrame:
             df = df.rename(columns={'source_code': 'text'})
@@ -141,7 +177,8 @@ class DataProcessor():
         with duplicates removed.
         """
         self.reset()
-        self.pbar.set_description("Dataset \"all_files\"")
+        log.info("Generating \"all_files\" dataset")
+        parquet_gen = self._read_parquet(self.dir_path)
 
         def add_file_name(df):
             df["file_name"] = df.apply(
@@ -149,7 +186,7 @@ class DataProcessor():
             return df
 
         # Split contracts into files
-        files_gen = map(self._explode_files, self.data)
+        files_gen = map(self._explode_files, parquet_gen)
         files_gen = map(add_file_name, files_gen)  # Add tmp file_name column
         files_gen = map(lambda df: (self.pbar.update(1), df)
                         [-1], files_gen)  # Update progress bar
@@ -168,19 +205,14 @@ class DataProcessor():
         with duplicates removed.
         """
         self.reset()
-        self.pbar.set_description("Dataset \"all\"")
+        log.info("Generating \"all\" dataset")
+        parquet_gen = self._read_parquet(self.dir_path)
+        contract_gen = map(lambda df: (self.pbar.update(1), df)
+                           [-1], parquet_gen)  # Update progress bar
 
-        # Update progress bar
-        contract_gen = map(lambda df: (self.pbar.update(1), df)[-1], self.data)
-
-
-        # Set the threshold much lower than when split in files,
-        # since a lot of contracts embeds the same library codes.
         filter_func = partial(
-            self._uniqify, grouping_column="contract_name", threshold=0.6)
+            self._uniqify, grouping_column="contract_name", threshold=0.5)
         df = merge_filter(contract_gen, filter_func)
-
-        df = self._uniqify_filename(df)
 
         return self.chunk_gen(df)
 
@@ -195,8 +227,10 @@ class DataProcessor():
         This function spits out the raw data in the chunk size specified.
         """
         self.reset()
-        self.pbar.set_description("Dataset \"raw\"")
-        for batch in self.data:
+        log.info("Generating \"raw\" dataset")
+        parquet_gen = self._read_parquet(self.dir_path)
+
+        for batch in parquet_gen:
             self.pbar.update(1)
             chunk = self.chunk(batch)
             if chunk is not None:
@@ -237,6 +271,9 @@ if __name__ == '__main__':
     import argparse
     import os
 
+    logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+    logging.getLogger().setLevel(logging.INFO)
+
     parser = argparse.ArgumentParser(
         description='Process dataset.')
 
@@ -248,7 +285,7 @@ if __name__ == '__main__':
                         default=30000, help='The number of contracts to store in each data file.')
     parser.add_argument('--datasets', metavar='datasets', type=str, nargs='*', required=False,
                         default=["all", "plain_text"], help='The datasets to make. "all", "all_files", "plain_text" or "raw".')
-    parser.add_argument('--clean', metavar='clean', type=bool, required=False,
+    parser.add_argument('-c', '--use-cache', metavar='use-cache', type=bool, required=False,
                         default=True, help='Wheter to clean existing files in output dir.')
     args = parser.parse_args()
 
@@ -256,23 +293,27 @@ if __name__ == '__main__':
         dataset_dir = os.path.join(args.output_dir, dataset_name)
         if not os.path.exists(dataset_dir):
             os.makedirs(dataset_dir, exist_ok=True)
-        if args.clean:
-            for file in Path(dataset_dir).glob("*.parquet"):
-                file.unlink()
+
+        cache_dir = None
+        if args.use_cache:
+            cache_dir = args.output_dir
 
         if dataset_name == "all":
-            dp = DataProcessor(args.source, args.chunk_size).all()
+            dp = DataProcessor(args.source, cache_dir, args.chunk_size).all()
         elif dataset_name == "all_files":
-            dp = DataProcessor(args.source, args.chunk_size).all_files()
+            dp = DataProcessor(args.source, cache_dir,
+                               args.chunk_size).all_files()
         elif dataset_name == "plain_text":
-            dp = DataProcessor(args.source, args.chunk_size).plain_text()
+            dp = DataProcessor(args.source, cache_dir,
+                               args.chunk_size).plain_text()
         elif dataset_name == "raw":
-            dp = DataProcessor(args.source, args.chunk_size).raw()
+            dp = DataProcessor(args.source, cache_dir, args.chunk_size).raw()
         else:
-            raise ValueError("Unknown dataset: " + dataset)
+            raise ValueError("Unknown dataset: " + dataset_name)
 
-        for index, dataset in enumerate(dp):
-            contracts_ds = Dataset.from_pandas(dataset)
+        for index, data in enumerate(dp):
+
+            #contracts_ds = Dataset.from_pandas(dataset)
             path = os.path.join(
                 args.output_dir, dataset_name, "part." + str(index) + ".parquet")
-            contracts_ds.to_parquet(path)
+            data.to_parquet(path)
