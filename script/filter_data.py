@@ -17,9 +17,9 @@ if __name__ == '__main__':
                         required=True, help='The directory where the output files should be stored.')
     parser.add_argument('--chunk-size', metavar='chunk_size', type=int, required=False,
                         default=30000, help='The number of contracts to store in each data file. Default: 30000')
-    parser.add_argument('--split-files', metavar='split_files', type=bool, required=False,
-                        default=False, help='The number of contracts to store in each data file. Default: False')
-    parser.add_argument('--threshold', metavar='threshold', type=int, required=False,
+    parser.add_argument('--split-files', metavar='split_files', type=bool, action=argparse.BooleanOptionalAction,
+                        default=False, help='The number of contracts to store in each data file.')
+    parser.add_argument('--threshold', metavar='threshold', type=float, required=False,
                         default=0, help='The similarity threshold. Default: 0')
     args = parser.parse_args()
 
@@ -28,7 +28,6 @@ if __name__ == '__main__':
 
     dp = DataProcessor(args.source, args.chunk_size)
     data_gen = dp.process(args.split_files, args.threshold)
-
     for index, data in enumerate(data_gen):
         path = os.path.join(args.output, "part." + str(index) + ".parquet")
         data.to_parquet(path)

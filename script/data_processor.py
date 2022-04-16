@@ -1,11 +1,5 @@
-from concurrent.futures import ProcessPoolExecutor
-import enum
 from multiprocessing import Pool, cpu_count
-from multiprocessing.pool import ThreadPool
-from random import shuffle
-from re import S
 from typing import Iterable
-from numpy import number
 import pandas as pd
 from pathlib import Path
 from datasets import Dataset
@@ -17,6 +11,7 @@ from functools import partial
 import itertools
 import glob
 import logging
+import numpy as np
 
 log = logging.getLogger("data-processor")
 
@@ -32,7 +27,7 @@ def find_dupes(column, threshold, df):
         if first_row is None:
             first_row = row
             continue
-        if row[column] == first_row[column]:
+        if column is None or row[column] == first_row[column]:
             jaccard_score = jaccard(first_row.source_code, row.source_code)
             if jaccard_score > threshold:
                 dupe_indexes.append(i)
@@ -49,14 +44,14 @@ class DataProcessor():
         self._buffer = None
         self._unique_file_names = pd.Series(dtype=str)
 
-        self.tot_dupes = 0
+        self.dupes_count = 0
         self.count = 0
 
         self.pbar = None
 
     def reset(self):
         self._buffer = None
-        self.tot_dupes = 0
+        self.dupes_count = 0
         self.count = 0
         self._unique_file_names = pd.Series(dtype=str)
 
@@ -90,35 +85,51 @@ class DataProcessor():
         df = pd.DataFrame(contracts)
         return df
 
-    def applyParallel(self, df_grouped, func):
-        with Pool() as p:
-            #ret_list = p.map(func=func, iterable=[group for name, group in df_grouped])
-            iterable = [group for name, group in df_grouped]
-            chunksize = 100
+    def applyParallel(self, iterable, total, func, chunksize=1):
+        with Pool() as p:            
             res_list = []
-            with tqdm(total=len(iterable), desc="Filtering", leave=False) as pbar:
+            with tqdm(total=total, desc="Filtering", leave=False) as pbar:
                 for res in p.imap_unordered(func=func, iterable=iterable, chunksize=chunksize):
                     pbar.update()
                     res_list.append(res)
+            
         return list(itertools.chain.from_iterable(res_list))
 
-    def _uniqify(self, df: pd.DataFrame, grouping_column, threshold=0.9) -> pd.DataFrame:
-        shuffled_df = df.sample(frac=1)
-        df_group = shuffled_df.groupby(grouping_column)
+    def _uniqify(self, df: pd.DataFrame, threshold=0.9, grouping_column=None) -> pd.DataFrame:
+        
+        # Drop pure duplicates.
+        size = df.shape[0]
+        df.drop_duplicates(subset=['source_code'], keep='first', inplace=True)
+        self.dupes_count += size - df.shape[0]
 
-        func = partial(find_dupes, grouping_column, threshold)
-        dupe_indexes = self.applyParallel(df_group, func)
+        if grouping_column:
+            shuffled_df = df.sample(frac=1, ignore_index=False)
+            df_group = shuffled_df.groupby(grouping_column)
+            iterable = [group for name, group in df_group]
+            func = partial(find_dupes, grouping_column, threshold)
+            match_indexes = self.applyParallel(iterable, len(iterable), func, 100)
+        else:
+            iterable = self.brute_force_gen(df)
+            func = partial(find_dupes, None, threshold)
+            match_indexes = self.applyParallel(iterable, df.shape[0], func, 1)
+        
+        df.drop(match_indexes, inplace=True)
 
-        self.tot_dupes += len(dupe_indexes)
-        self.count += df.shape[0]
+
+        self.dupes_count += len(match_indexes)
+        
+        dupes=str(self.dupes_count) + "/" + str(self.count)
+        dupes_percentage=str(round(self.dupes_count*100/self.count, 2)) + "%"
         self.pbar.set_postfix(
-            dupes=str(self.tot_dupes) + "/" + str(self.count),
-            dupes_percentage=str(round(self.tot_dupes*100/self.count, 2)) + "%"
-        )
-
-        df.drop(df.index[dupe_indexes], inplace=True)
+            dupes=dupes + " (" + str(dupes_percentage) + ")"
+            )
+        
         return df
-
+    
+    def brute_force_gen(self, df: pd.DataFrame):
+        for i in range(df.shape[0]):
+            yield df.iloc[i:]
+    
     def _uniqify_filename(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Deprecated
@@ -128,7 +139,7 @@ class DataProcessor():
 
         dupes = df["file_name"].isin(self._unique_file_names)
         # Keep empty filennames, as well as all the vyper files with standard contract name (Etherscan).
-        # TODO: Actuually compare the source code for uniqness.
+
         dupes[(df['file_name'] == '') | (
             df['file_name'] == 'Vyper_contract.vy')] = False
         df = df[~dupes]
@@ -142,8 +153,8 @@ class DataProcessor():
     def process(self, split_files: bool, threshold: float) -> Iterable[Dataset]:
         self.reset()
         log.info("Generating dataset")
-        log.info("Split files: \"" + str(split_files) + "\"")
-        log.info("Similarity threshold: \"" + str(threshold) + "\"")
+        log.info("Split files: " + str(split_files))
+        log.info("Similarity threshold: " + str(threshold))
         data_gen = self._read_parquet(self.dir_path)
         
         def add_file_name(df):
@@ -157,33 +168,41 @@ class DataProcessor():
             data_gen = map(add_file_name, files_gen)  # Add tmp file_name column
 
         data_gen = map(lambda df: (self.pbar.update(1), df)[-1], data_gen)  # Update progress bar
+        data_gen = map(lambda df: (setattr(self, 'count', (self.count + df.shape[0])), df)[-1], data_gen)  # Update counter
 
         if threshold: 
             grouping_column = "file_name" if split_files else "contract_name"
             filter_func = partial(
-                self._uniqify, grouping_column=grouping_column, threshold=threshold)
-            df = merge_filter(data_gen, filter_func)
-
+                self._uniqify, threshold=threshold, grouping_column=grouping_column)
+            df = merge_filter(data_gen, filter_func) # Merge and filter data
+            
+            #df = self._uniqify(df=df, threshold=threshold, grouping_column=None) # Filter again without grouping (VERY COSTLY) ((n-1)^2)/cpus
+            
             if split_files:
                 df.drop(columns='file_name', inplace=True)  # Drop tmp file_name column
             
             return self.chunk_gen(df)
-
         else:
-            for batch in data_gen:
-                chunk = self.chunk(batch)
-                if chunk is not None:
-                    yield chunk
-                else:
-                    continue
-            
-            # Always serve the "rest" batch
-            while self._buffer is not None:
-                chunk = self._buffer.iloc[:self.chunk_size]
-                self._buffer = self._buffer.iloc[self.chunk_size:]
-                if self._buffer.shape[0] == 0:
-                    self._buffer = None
+            return self.resample(data_gen)
+
+    def resample(self, iterator: Iterable) -> Iterable[Dataset]:
+        for batch in iterator:
+            chunk = self.chunk(batch)
+            if chunk is not None:
                 yield chunk
+            else:
+                continue
+
+            if self._buffer is not None:
+                while self._buffer.shape[0] > self.chunk_size:
+                    chunk = self._buffer.iloc[:self.chunk_size]
+                    self._buffer = self._buffer.iloc[self.chunk_size:]
+                    yield chunk
+
+        # Always serve the "remainder" batch
+        if self._buffer is not None:
+            yield self._buffer
+
     
     def plain_text(self) -> Iterable[Dataset]:
         """
