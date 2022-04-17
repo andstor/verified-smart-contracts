@@ -29,7 +29,7 @@ class ContractFileHandler():
     def _extract_text_files(self, data):
         files = []
         files_code = re.split(
-            '\/\/ File:? (.*?' + re.escape(self.file_extension) + ')', data)
+            '\/\/ File:? (.*' + re.escape(self.file_extension) + ')', data)
 
         # Single file
         if len(files_code) == 1:
