@@ -5,6 +5,8 @@
 Verified Smart Contracts is a dataset of real Ethereum Smart Contract, containing both Solidity and Vyper source code. It consists of every deployed Ethereum Smart Contract as of :black_joker: 1st of April 2022, whose been verified on Etherescan and has a least one transaction.
 The dataset is available at 🤗 [Hugging Face](https://huggingface.co/datasets/andstor/smart_contracts).
 
+## Metrics
+
 | Component | Size | LoC |
 | --------- |:----:| ---:|
 | [Raw](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/raw)| 8.78 GiB | 839665295 |
