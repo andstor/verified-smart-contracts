@@ -7,7 +7,7 @@ The dataset is available at 🤗 [Hugging Face](https://huggingface.co/datasets/
 
 | Component | Size | LoC |
 | --------- |:----:| ---:|
-| [Raw](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/raw)|  |  |
+| [Raw](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/raw)|  | 839665295 |
 | [Flattened](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/flattened) |  | 83926134 |
 | [Inflated](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/inflated) |  | 53843305 |
 
