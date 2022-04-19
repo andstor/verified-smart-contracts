@@ -5,11 +5,12 @@
 Smart Contracts is a dataset of real Ethereum Smart Contract, containing both Solidity and Vyper source code. It consists of every deployed Ethereum Smart Contract as of :black_joker: 1st of April 2022, whose been verified on Etherescan and has a least one transaction.
 The dataset is available at 🤗 [Hugging Face](https://huggingface.co/datasets/andstor/smart_contracts).
 
-The data format used is parquet files, each with a total of 30,000 records.
+| Component | Size | LoC |
+| --------- |:----:| ---:|
+| [Raw](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/raw)|  |  |
+| [Flattened](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/flattened) |  |  |
+| [Inflated](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/inflated) |  |  |
 
-https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/raw
-https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/flattened
-https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/inflated
 
 ## Description
 
@@ -47,8 +48,8 @@ A large quantity of the Smart Contracts is/contains duplicated code. This is mos
 
 The string comparison algorithm used is the [Jaccard index](https://en.wikipedia.org/wiki/Jaccard_index).
 
-## Metrics
-TODO
+## Data format
+The data format used is parquet files, each with a total of 30,000 records.
 
 ## License
 
