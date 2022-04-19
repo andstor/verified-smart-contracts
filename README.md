@@ -7,6 +7,10 @@ The dataset is available at 🤗 [Hugging Face](https://huggingface.co/datasets/
 
 The data format used is parquet files, each with a total of 30,000 records.
 
+https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/raw
+https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/flattened
+https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/inflated
+
 ## Description
 
 ### Raw
@@ -42,7 +46,6 @@ This will produce a plain text version of the inflated dataset, and save it to `
 A large quantity of the Smart Contracts is/contains duplicated code. This is mostly due to frequent use of library code. Etherscan embeds the library code used in a contract in the source code. To mitigate this, some filtering is applied in order to produce dataset with mostly unique contract source code. This filtering is done by calculating the string distance between the surce code. Due to the large amount of contracts (~2 million), the comparison is only done in groups by `contract_name` for the flattened dataset, and by `file_name` for the inflated dataset.
 
 The string comparison algorithm used is the [Jaccard index](https://en.wikipedia.org/wiki/Jaccard_index).
-
 
 ## Metrics
 TODO
