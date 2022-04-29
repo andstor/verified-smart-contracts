@@ -49,7 +49,9 @@ def parse_data_worker(iterrows):
         extract = visitor.visit(tree)
         for entry in extract:
             entry['contract_name'] = row['contract_name']
+            entry['file_path'] = row['file_path']
             entry['contract_address'] = row['contract_address']
+            entry['language'] = row['language']
             entry['compiler_version'] = row['compiler_version']
             entry['license_type'] = row['license_type']
             entry['swarm_source'] = row['swarm_source']
@@ -70,14 +72,16 @@ def parse_data(dir_path: str, chunk_size: int) -> pd.DataFrame:
     data_df = pd.DataFrame(
         data,
         columns=[
-            "contract_name", "contract_address", 
+            "contract_name", "file_path", "contract_address", "language",
             "class_name", "class_code", "class_documentation", "class_documentation_type",
             "func_name", "func_code", "func_documentation", "func_documentation_type",
             "compiler_version", "license_type", "swarm_source"]
     )
     data_df = data_df.astype({
         'contract_name': "string",
+        'file_path': "string",
         'contract_address': "string",
+        'language': "string",
         'class_name': "string",
         'class_code': "string",
         'class_documentation': "string",
