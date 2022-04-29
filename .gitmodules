@@ -1,0 +1,3 @@
+[submodule "solidity-universal-parser"]
+	path = solidity-universal-parser
+	url = https://github.com/andstor/solidity-universal-parser.git

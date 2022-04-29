@@ -12,6 +12,7 @@ The dataset is available at 🤗 [Hugging Face](https://huggingface.co/datasets/
 | [Raw](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/raw)| 8.78 GiB | 839665295 |
 | [Flattened](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/flattened) | 1.00 GiB | 83926134 |
 | [Inflated](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/inflated) | 0.76 GiB | 53843305 |
+| [Parsed](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/parsed) | ? GiB | ? |
 
 
 ## Description
@@ -35,6 +36,13 @@ The inflated dataset splits every contracts into its representative files. These
 
 ```script
 python script/filter_data.py -s parquet -o data/inflated --split-files --threshold 0.9
+```
+
+### Parsed
+The parsed dataset contains "code, comment" pairs of Solidity code. The code is parsed with the [solidity-universal-parser](https://github.com/andstor/solidity-universal-parser.git).
+
+```script
+python script/parse_data.py -s data/inflated -o data/parsed
 ```
 
 ### Plain Text
