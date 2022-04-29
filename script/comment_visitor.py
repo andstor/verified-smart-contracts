@@ -36,16 +36,18 @@ class CommentVisitor(SolidityVisitor):
 
     def visitFunctionDefinition(self, ctx: SolidityParser.FunctionDefinitionContext):
         token = ctx.parser.getTokenStream().get(ctx.start.tokenIndex-1)
+        func_data = {}
+        func_data["func_name"] = ctx.identifier().getText() if ctx.identifier() else ""
+        func_data["func_code"] = self.extract_original_text(ctx)
         if (token.channel == 1):
             comment = self.extractComment(ctx)
-            data = {
-                "func_name": ctx.identifier().getText() if ctx.identifier() else "",
-                "func_code": self.extract_original_text(ctx),
-                "func_documentation": comment["text"],
-                "func_documentation_type": comment["type"]
-            }
-            return self.aggregateResult([data], self.visitChildren(ctx))
-        return self.visitChildren(ctx)
+            func_data["func_documentation"] = comment["text"]
+            func_data["func_documentation_type"] = comment["type"]
+        else:
+            func_data["func_documentation"] = ""
+            func_data["func_documentation_type"] = ""
+        
+        return self.aggregateResult([func_data], self.visitChildren(ctx))
 
     def extractComment(self, ctx):
         stream = ctx.parser.getTokenStream()
