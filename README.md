@@ -60,7 +60,7 @@ A large quantity of the Smart Contracts is/contains duplicated code. This is mos
 The string comparison algorithm used is the [Jaccard index](https://en.wikipedia.org/wiki/Jaccard_index).
 
 ## Data format
-The data format used is parquet files, each with a total of 30,000 records.
+The data format used is parquet files, most with a total of 30,000 records.
 
 ## License
 
