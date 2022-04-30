@@ -26,14 +26,14 @@ python script/2parquet.py -s data -o parquet
 ```
 
 ### Flattened
-The flattened dataset contains smart contracts, where every contract contains all required library code. Each "file" is marked in the source code with a comment stating the original file path: `//File: path/to/file.sol`. These are then filtered for uniqeness by requiring a uniqeness factor of 0.5. The low uniqeness requirement is due to the often large amount of embedded library code. If a more unique dataset is required, see the [inflated](#inflated) dataset instead.
+The flattened dataset contains smart contracts, where every contract contains all required library code. Each "file" is marked in the source code with a comment stating the original file path: `//File: path/to/file.sol`. These are then filtered for uniqeness by requiring a similarity threshold of 0.5. The low uniqeness requirement is due to the often large amount of embedded library code. If a more unique dataset is required, see the [inflated](#inflated) dataset instead.
 
 ```script
 python script/filter_data.py -s parquet -o data/flattened --threshold 0.5
 ```
 
 ### Inflated
-The inflated dataset splits every contracts into its representative files. These are then filtered for uniqeness by requiring a uniqeness factor of 0.9.
+The inflated dataset splits every contracts into its representative files. These are then filtered for uniqeness by requiring a similarity threshold of 0.9.
 
 ```script
 python script/filter_data.py -s parquet -o data/inflated --split-files --threshold 0.9
