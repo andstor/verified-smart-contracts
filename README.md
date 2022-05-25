@@ -9,8 +9,8 @@ The dataset is available at 🤗 [Hugging Face](https://huggingface.co/datasets/
 
 | Component | Size | Num rows | LoC[^1] |
 | --------- |:----:| -------:| -------:|
-| [Raw](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/raw)| 8.78 GiB | 2217692 | 839665295 |
-| [Flattened](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/flattened) | 1.19 GiB | 136969 | 97529473 |
+| [Raw](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/raw)| 8.80 GiB | 2217692 | 839665295 |
+| [Flattened](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/flattened) | 1.16 GiB | 136969 | 97529473 |
 | [Inflated](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/inflated) | 0.76 GiB | 186397 | 53843305 |
 | [Parsed](https://huggingface.co/datasets/andstor/smart_contracts/tree/main/data/parsed) | 1.83 GiB | 4434014 | 29965185 |
 
