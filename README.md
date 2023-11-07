@@ -2,8 +2,8 @@
 
 > :page_facing_up: Verified Ethereum Smart Contract dataset
 
-Verified Smart Contracts is a dataset of real Ethereum Smart Contract, containing both Solidity and Vyper source code. It consists of every deployed Ethereum Smart Contract as of :black_joker: 1st of April 2022, whose been verified on Etherescan and has a least one transaction.
-The dataset will be available at 🤗 [Hugging Face](https://huggingface.co/datasets/andstor/smart_contracts).
+Verified Smart Contracts is a dataset of real Ethereum Smart Contract, containing both Solidity and Vyper source code. It consists of every deployed Ethereum Smart Contract as of :black_joker: 1st of April 2022, whose been verified on Etherescan, and has at least one transaction.
+The dataset is available at 🤗 [Hugging Face](https://huggingface.co/datasets/andstor/smart_contracts).
 
 ## Metrics
 
