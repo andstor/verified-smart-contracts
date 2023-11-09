@@ -2,7 +2,7 @@ datasets==2.0.0
 fastparquet==0.8.0
 pandas==1.4.1
 py-etherscan-api==0.8.0
-pyarrow==7.0.0
+pyarrow==14.0.1
 tqdm @ git+https://github.com/tqdm/tqdm.git@refs/pull/1054/head
 textdistance[extras]
 antlr4-python3-runtime==4.9.3
